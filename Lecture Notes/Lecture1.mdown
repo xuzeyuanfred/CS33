@@ -1,0 +1,322 @@
+#CS33 Lecture 1
+
+##The most important thing is this class are the labs
+
+###Grading Percentage:
+Exams (45%)
+	Midterm, 20%
+	Final, 35%
+	Open book, open notes
+Labs (40%)
+	4 labs, 10% each
+	Work alone
+Homework (5%)
+	5 assignments, 1% each
+	Electronic submission
+Homework and Labs Due via CourseWeb by Midnight 
+
+###Cheating:
+Sharing Code: copying retying looking at or supplying a copy of a file
+###Not Chearing:
+Help with high level design issues
+Help others with debugging 
+Help Others to use systems and tools 
+
+###SEAS Linux Machine
+
+lnxsrv.seas.ucla.edu
+Remote Access Only 
+
+```shell
+ssh -X lnxsrv.seas.ucla.edu -l testuser
+```
+where the tesetuser is your username 
+
+##Course Themes
+Abstraction has limits 
+Low level design makes you a more efficient programmer
+and Bugs are hard to find by merely on a high level interface
+
+###Compillation Process
+
+	hello.c (text)
+ 	 | 
+ 	 |
+    pre-processor (cpp)
+     |
+     |
+    hello.i (text)
+     |
+     |
+    compiler (ccl)
+     |
+     |
+    hello.s(text)
+     |
+     |
+    assembler(as)
+     |
+     |
+    hello.o (binary)
+     |
+     |
+    linker (id)
+     |
+     |
+    hello (binary)
+
+
+
+
+##Bits and Bytes 
+
+A bit is either a 0 or 1
+Computer determines what to do, and manipulate numbers, strings, etc...
+Bits are easy to store and have reliable transmission on noisy environment
+
+
+###Representing information as bits
+
+Base Two Number Representation
+1 Byte = 8bits
+Decimal: 0 to 255 base 10
+Hexadecimal: 00 to FF base 16
+write (FA1D37B)16 in C as:
+0xFA1D37B
+
+
+###Type and there memory in C
+
+|C DataType    |typical 32 |typical 64	|	x86-64 |
+|--------------|:---------:|-----------:|---------:|
+|	Char       |	1	   |	1		|	1	   |
+|  	short 	   |	2	   |	2		|	2	   |
+|	int 	   |	4	   |	4		|	4	   |
+|   long       |    4      |    8       |   8      |
+|   float      |    4      |    4       |   4      |
+|   doble      |    8      |    8       |   8      |
+| long double  |    -      |    -       |  10/16   |
+|   pointer    |    4      |    8       |   8      |
+
+
+
+###Boolean Algebra
+| A | B | A&B |
+|---|---|-----|
+| 1 | 1 |  1  |         (AND)
+| 1 | 0 |  0  |
+| 0 | 1 |  0  |
+| 0 | 0 |  0  |
+
+| A | ~A|
+|---|---|				(NOT)
+| 1 | 0 |
+| 0 | 1 |
+
+| A | B | (A|B) |
+|---|---|-------|
+| 1 | 1 |   1   |
+| 1 | 0 |   1   |		(OR)
+| 0 | 1 |   1   |
+| 0 | 0 |   0   |
+
+| A | B | A^B   |
+|---|---|-------|
+| 1 | 1 |  0    |
+| 1 | 0 |  1    |		(XOR)
+| 0 | 1 |  1    |
+| 0 | 0 |  0    |
+
+
+Representation: Width w bit vector represents subsets of {0,1,...,w-1}
+a(j) = 1 if j is in A
+
+i.e. the position is in small endian: the most significant bit is at rightmost
+
+num:0110001011    {8,7,3,1,0}
+pos:9876543210
+
+
+
+###Bit Level Operations in C
+
+Operators: &, |, ~, ^
+
+Apply to any integral data type, i.e. long, int, short, char, unsigned 
+View arguments as bit vectors 
+Arguments applied bit-wise
+
+Hex:	~0x41  -> 0xBE
+Bin:	~01000001 -> 10111110
+
+Hex:	~0x00 -> 0xFF
+Bin:	~00000000 -> 11111111
+
+Hex:    0x69 & 0x55
+Bin:    01101001 & 01010101 -> 01000001
+
+###Logic Comparisons
+
+&&, ||, !
+0 is viewd as false, and everything else true
+always return 0 or 1
+
+!0x41 -> 0x00
+!0x22 -> 0x00
+!0x00 -> 0x01
+!!0x41 -> 0x01
+
+0x69 && 0x55 -> 0x01
+Only return 0x00 or 0x01
+with all these logical operators 
+
+
+###Shift Operators 
+
+most sig: leftmost bit
+least sig: rightmost bit
+
+Left shit: x << y
+shift bit vector x left y bits, add 0s to the right 
+
+right shift: x >> y
+(logical) fill with 0's on the left
+(arithmetic) replicate most significant bit on the left 
+
+01100010 << 3 -> 00010000 (add zeros to the right)
+01100010 >> 2 -> (logical)0011000
+			  -> (arithmetic)0011000
+10100010 << 3 -> 00010100
+		 >> 2 -> (logical)00101000
+		 >> 2 -> (arithemtic)11101000
+
+Undefined Bahavior: shit amount <0 or > wordsize
+
+###Encoding Integers
+Unsigned: normal binary representation
+
+Two's complement: gives a sign 
+
+|Tmin| = Tmax + 1 (asymmetry of 2's complement)
+Casting doesn't change bit representation
+all results are nonnegative
+
+C short 2 bytes long:
+
+Sign bits: most significant bit represents sign
+0 for positive
+1 for negative
+
+Convert from binary code to 2's complement:
+1. write down the binary vector
+2. flip all 0s and 1s
+3. add 1 to the vector 
+
+
+Convert from 2's complement to unsigned integer:
+1. if sign bit is 0, they are exactly the same
+2. if sign bit is 1, flip all 0s and 1s 
+3. add 1 to the outcome 
+4. result is the negative version of outcome 
+
+###Numeric Range
+Umin = 0
+Umax = 2^w -1  (1111...1)
+
+###Two's Complement Values
+Tmin = -2^(w-1)
+Tmax = 2^(w-1)-1
+Minus 1 = 11111...1
+
+Tmax + Tmin  = 1 
+
+|Tmin| = Tmax + 1 (assymetry)
+
+Umax = 2 * Tmax + 1 
+
+1000 is -8 in 2's complement
+
+in C, we have 
+
+```C
+#include <limits.h>
+const int ULONG_MAX
+const int LONG_MAX
+const int LONG_MIN
+```
+These values are platform specific
+
+
+###Signed vs. Unsigned in C
+
+By default constants are signed
+unsigned if have a 'U' suffix
+i.e. oU
+
+The mapping(0x0 to 0xf):
+from 0x0 to 0x7, we have the same mapping
+from 0x8 to 0xF, we add 16 when converting from signed to unsigned
+
+Ordering Inversion: Negative -> large positive 
+
+|2's Complement |  Unsigned |
+|---------------|-----------|
+|	Tmax 	    |  Tmax     |
+|    0       	|    0      |
+|    -1         |  Umax     |
+|    -2         |  Umax - 1 |
+|    Tmin       |  Tmax + 1 |
+
+
+type casting 
+
+```C
+int tx, ty;
+unsigned ux, uy; 
+tx = (int) ux;
+uy = (unsigned) ty;
+```
+Casting Surprises:
+
+1. if there is a mix of signed and unsigned in single expression, the signed implicitly cast to unsigned
+2. including comparison operators >, <, <=, >=, ==
+
+Example:
+
+| Constant 1 | Constant 2  | Relation| Evaluation|
+|------------|-------------|---------|-----------|
+|     0      |    0U       |   ==    | unsigned  |
+|     -1     |     0       |    <    |  signed   |
+|     -1     |    0U       |    >    |  unsigned |
+|     Tmax   |   Tmin      |    >    |  signed   |
+|     TmaxU  |   Tmin      |    <    |  unsigned |
+|     -1     |     -2      |    >    |  signed   |
+|     -1U    |     -2      |    >    |  unsigned |
+|     Tmax   |   -Tmin     |    <    |  unsigned |
+|     Tmax   |(int)(-Tmin)U|    >    |  signed   | 
+
+
+###Sign Expansion
+
+Given w bits binary vector, convert to w+k bits vector
+the solution is to copy the sign bit k times to the left
+i.e. converting a short to an int is doing sign extension
+
+Expanding:
+
+*unsigned: zero added
+*signed: sign extension
+*both yield expected result
+
+Truncating:
+
+*Unsigned/signed: bits are truncated
+*Results reinterpretated
+*Unsigned: mod operation
+*Signed: similar to mod
+*small numbers yield expected results
+
+
+
+
+
