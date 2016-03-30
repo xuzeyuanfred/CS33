@@ -249,6 +249,10 @@ const int LONG_MIN
 These values are platform specific
 
 
+Conversion Visualization:
+
+
+
 ###Signed vs. Unsigned in C
 
 By default constants are signed
@@ -317,6 +321,14 @@ Truncating:
 *Unsigned: mod operation
 *Signed: similar to mod
 *small numbers yield expected results
+
+
+###Addition
+
+Unsigned Addition:
+
+
+
 
 
 
