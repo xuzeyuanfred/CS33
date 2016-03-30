@@ -251,6 +251,8 @@ These values are platform specific
 
 Conversion Visualization:
 
+![Conversion Visualization]
+(https://github.com/xuzeyuanfred/CS33/blob/master/Lecture%20Notes/Screen%20Shot%202016-03-30%20at%2012.06.39%20PM.png)
 
 
 ###Signed vs. Unsigned in C
