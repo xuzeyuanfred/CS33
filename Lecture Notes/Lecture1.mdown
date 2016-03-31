@@ -328,10 +328,141 @@ Truncating:
 ###Addition
 
 Unsigned Addition:
+1. add from rightmost(least significant) to the leftmost(most significant) bit
+2. 1+0, 0+1 gets 1; 0+0 gets 0, 1+1 gets 0 and brings a carry 1 to the next bit
+3. if there results in an extra carry at the leftmost bit, ignore it
+4. if such a carry bit exists, an overflow is detected.
+    1                    1        1
+  1101       1101       1101      1101
++ 1101  -> + 1101  -> + 1101 -> + 1101  -> ignore the 1, and we get 1110
+------     ------     ------    ------      which is an overflow
+     0         10        110     11110
+
+Two's Complement Addition:
+1. When both numbers are positive, we treat it in the case of unsigned addition
+2. when numbers are of different signs:
+i.e. 56 + (-19)
+19 = 0010011
+-19 = 1101101
+
+     1           11          111         1111   
+  0111000      0111000      0111000      0111000
++ 1101101    + 1101101    + 1101101    + 1101101
+--------- -> --------- -> --------- -> --------- -> truncating the overflowed 1
+    0101         00101       100101     10100101    answer = 0100101
+
+i.e. 72 + (-100)
+100 = 01100100
+-100 = 10011100
+
+  01001000    
++ 10011100
+----------   --> convert back: 11100100 -> 00011011 -> 00011100 = -28
+  11100100
+
+
+*TAdd and UAdd have identical Bit-Level Behavior
+
+
+```C
+int s, t, u, v;
+s = (int) ((unsigned) u + (unsigned) v);
+t = u + v;
+```
+
+This C code will give that t == s
+
+Addition overflow in 2's complement:
+1. if two positive number results in a negative number
+2. if two negative number results in a positive number 
+3. if carry into the sign-bit position is not equal to the carry out of the sign-bit position 
+4. no overflow when positive combines with negative values
+
+
+
+### Multiplication 
+
+Goal: computing product of w-bit numbers x,y, either signed or unsigned;
+But, exact results can be bigger than w bits
+*Unsigned: up to 2w bits,
+ result range:  0 <= x*y <= (2^w - 1)^2
+*Two's complement min: up to 2w-1 bits
+  x*y >= (-2^w-1)*(2^w-1 - 1)
+ Two's complement max: up to 2w bits, only for (Tmin)^2
+
+Power of 2 Multiplication with Shift:
+u << k gives u * 2^k for both signed and unsigned 
+Left shift (add zeors to the rightside)
+
+Power of 2 division with Shift (right shift, arithmetic)
+u >> k gives u / 2^k
+use arithemtic right shift (adding most significant bits on the left)
+
+
+##Summary On Arithmetic:
+
+Addition: Unsigned/signed: Normal Addition followed by truncate,
+          same operation on bit level
+          Unsigned: addition mod 2^w
+          (mathematical addition + possible subtraction by 2^w)
+        Signed: modified addition mod 2^w (possible addition or subtraction by 2^w)
+
+Multiplication: Unsigned/signed : Normal multiplication followed by truncate,
+                same operation on bit level
+                Unsigned: Multiplication mod 2^w
+                Signed: Modified Multiplcication mod 2^w 
+
+
+
+###Unsigned Warnings 
+
+```C
+unsigned i;
+for (i = cnt-2; i >=0; i--)
+    a[i] += a[i+1];
+```
+this will never terminate the loop, since i >=0 always true for unsigned i
+Modify it:
+
+```C
+size_t i;
+for (i = cnt-2; i < cnt; i--)
+    a[i] += a[i+1];
+```
+when i is less than 0, we have an overflow occured, and i -> UMax
+data type size_t defined as unsigned value with length = word size
+
+Use unsigned when performing Modular Arithemtic
+Use unsigned when using bits to represent sets
 
 
 
 
+##Memeory Organization Byte Organization
+
+
+![Memory graph]
+(file:///Users/caotao099/Desktop/GitRepos/CS33/Lecture%20Notes/Screen%20Shot%202016-03-30%20at%208.50.04%20PM.png)
+
+
+*Programs refer to data by address
+computer memory conceptually can be envisioned as A huge array of bytes 
+and address is like an index to that array, 
+and a pointer variables stores the address
+
+System provides private address spaces to each process
+process is a program being executed
+and each program can only deal with its private data
+
+Program --> Memory --> CPU 
+
+###Machine Words
+
+Any given computer has a 'Word Size'
+most machines use 32bits as word size; which limits address to 2^32 = 4GB 
+some use 64bits word size or 2^64 = 18EB memories
+word size is always an integer
+different data type thus consumes different consecutive chunks of memory.
 
 
 
