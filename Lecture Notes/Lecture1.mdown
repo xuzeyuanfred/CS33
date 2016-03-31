@@ -332,12 +332,7 @@ Unsigned Addition:
 2. 1+0, 0+1 gets 1; 0+0 gets 0, 1+1 gets 0 and brings a carry 1 to the next bit
 3. if there results in an extra carry at the leftmost bit, ignore it
 4. if such a carry bit exists, an overflow is detected.
-    1                    1        1
-  1101       1101       1101      1101
-+ 1101  -> + 1101  -> + 1101 -> + 1101  -> ignore the 1, and we get 1110
-------     ------     ------    ------      which is an overflow
-     0         10        110     11110
-
+ 
 Two's Complement Addition:
 1. When both numbers are positive, we treat it in the case of unsigned addition
 2. when numbers are of different signs:
@@ -345,20 +340,11 @@ i.e. 56 + (-19)
 19 = 0010011
 -19 = 1101101
 
-     1           11          111         1111   
-  0111000      0111000      0111000      0111000
-+ 1101101    + 1101101    + 1101101    + 1101101
---------- -> --------- -> --------- -> --------- -> truncating the overflowed 1
-    0101         00101       100101     10100101    answer = 0100101
 
 i.e. 72 + (-100)
 100 = 01100100
 -100 = 10011100
 
-  01001000    
-+ 10011100
-----------   --> convert back: 11100100 -> 00011011 -> 00011100 = -28
-  11100100
 
 
 *TAdd and UAdd have identical Bit-Level Behavior
@@ -442,7 +428,7 @@ Use unsigned when using bits to represent sets
 
 
 ![Memory graph]
-(file:///Users/caotao099/Desktop/GitRepos/CS33/Lecture%20Notes/Screen%20Shot%202016-03-30%20at%208.50.04%20PM.png)
+(https://github.com/xuzeyuanfred/CS33/blob/master/Lecture%20Notes/Screen%20Shot%202016-03-30%20at%208.50.04%20PM.png)
 
 
 *Programs refer to data by address
@@ -463,6 +449,69 @@ most machines use 32bits as word size; which limits address to 2^32 = 4GB
 some use 64bits word size or 2^64 = 18EB memories
 word size is always an integer
 different data type thus consumes different consecutive chunks of memory.
+
+[!Memory Layout]
+(https://github.com/xuzeyuanfred/CS33/blob/master/Lecture%20Notes/Screen%20Shot%202016-03-30%20at%208.52.28%20PM.png)
+
+
+##Byte Ordering
+
+(Sun, PPC Mac, Internet)
+Big Endian: Least significant byte has the highest address
+
+(x86, ARM processors running Android, iOS, and Windows)
+Little Endian: Least significant byte has the lowest address
+
+for a hexvalue 0x0123456
+
+[!Endian]
+()
+
+[!Endian_2]
+()
+
+
+
+Print Byte representation of Data:
+
+```C
+typedef unsigned char *pointer;
+
+void show_bytes(pointer start, size_t len) {
+    size_t i;
+    for (i = 0; i < len; i++) {
+        prinft("%p\t0x%.2x\n",start+i, start[i]);
+    }
+    printf("\n");
+}
+```
+Here, %p means to print pointer
+      %x means to print Hexadecimal
+
+For pointers, different compillers and machines assign different locations 
+to objects at run time. 
+
+###Cstring
+
+Byte ordering is not an issue in Cstring:
+1. Cstring is represented by array of chars.
+2. Each char is encoded in ASCII
+3. has standard 7-bit encoding of character set
+'0' -> 0x30
+'i' -> 0x30+i
+null terminated, with final char = 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
