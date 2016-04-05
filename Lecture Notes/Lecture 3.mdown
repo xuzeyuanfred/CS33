@@ -1,0 +1,357 @@
+#Lecture 3: Machine-Level Programming I: Basics
+
+x86-64
+
+##Intel x86 Processor
+
+Architecture: The parts of a processor design that one needs to understand or write assembly/machine code. 
+(Examples: Instruction set specification, registers)
+
+Microarchitecture: Implementation of the architecture. 
+(Examples: cache sizes and core frequency)
+
+Code forms: 
+Machine code: the byte-level programs that a processor executes 
+Assembly code: A text representation of the machine code. 
+
+(image)
+
+**Programming-Visible state**:
+
+PC: Program Counter 
+	stores the Adress of next instruction, called "RIP"
+
+Register file: Heavily used program data
+
+Condition Codes: 
+	store status information about most recent arithmetic or logical operation
+	Used for coditional branching 
+
+Memory: 
+	Bytes addressable array
+	Code and user data
+	Stack to support procedures 
+
+
+##C, Assembly
+
+###Turning C into Object Code
+
+1. codes in files p1.c p2.c
+2. compile with command: gcc -Og p1.c p2.c -o p 
+3. User basic optimization (-Og) [New to recent version of GCC]
+4. put resulting binary in file p
+
+pl.c --(gcc -Og -S) --> pl.s --(assembler)--> p1.o --(linker)--> executables
+
+
+same piece of C code, on different machines, can have different assembly files. (we deal with x86-64 machine)
+
+```C
+long plus(long x, long y); 
+
+void sumstone(long x, long y, long *dest)
+{
+	long t = plus(x,y);
+	*dest = t;
+}
+```
+
+```Assembly 
+sumstore:
+	pushq  %rdx
+	movq   %rdx,  %rbx
+	call   plus 
+	movq   %rax, (%rbx)
+	popq   %rbx
+	ret 
+```
+Obtained with command 
+
+```shell
+
+gcc -Og -S sum.c 
+
+```
+
+###Assembly characteristics: Data Types
+
+Integer: data of 1,2,4,8 bytes (data values or addresses)
+Floating point of 4,8,10 bytes
+Code: Bytes sequences encoding series of instructions
+No aggregate types such as arrays or structs 
+(just contiguously allocated bytes in memory)
+
+Arithmetic and Logical operations for registers 
+Transfer data: memory <--> registers 
+Transfer Control: Unconditional jumps and conditonal branches
+
+###Object Code 
+
+Assembler:
+	Translate .s into .o
+	Binary encoding of each instruction
+	Nearly-complete image of executable codes 
+	Missing linkages between code in different files 
+
+
+Linker:
+	Resolves references between files
+	Combines with static run-time libraries
+	Some libraries are dynamically linked
+	linking occurs when program beigns execution
+
+###Machine Instructions example:
+
+```C 
+*dest = t; 
+```
+The C code stores t where designated by dest
+
+```Assembly
+movq %rax, (%rbx)
+```
+Move 8-byte value to memory
+Quad words in x86-64 parlance
+
+__Operands__:
+t: 		 register %rax
+dest : 	 register %rbx
+*(dest): register (%rbs)
+
+
+__Object Code__
+3 byte instruction
+Stored at address 0x40059e
+0x40059e: 48 89 03
+
+
+
+###Disassembling Object Code
+
+sometimes it's useful to disassemble codes to read instructions
+
+```shell
+objdump -d sum
+```
+Userful tools for examining object code 
+Analyes bits pattern of series of instructions 
+Produces approximate rendition of assembly code 
+Can be run on either a.out or .o file 
+
+Another option is to use __gdb__ debugger:
+
+```shell
+gdb sum 
+disassemble sumstore
+```
+
+
+
+##Assembly Basics: Registers, Operands, Move
+
+(images about registers in x86-63)
+
+###Moving Data
+
+__movq Source, Dest;__
+
+Operand Type: (methods to specify the moved values)
+	Immediate: Constant Integer data 
+		Example: $0x400, $-533
+		Like C constant, but prefixed with '$'
+		Encoded with 1,2, or 4 bytes
+	Register: One of the 16 integer registers
+		Example: %rax, %r13 
+		But %rsp is reserved for special use 
+		Others have special users for particular instructions 
+	Memory: 8 consecutive bytes of memory at address given by register
+		Example: (%rax) addresses often written in hexadecimal notation
+
+(image that shows movq operand combination)
+
+```
+(Immediate) -> (Reg)
+movq $0x4, %rax
+(Immedaite) -> (Mem)
+movq $-147, (%rax)
+(Register) -> (Reg)
+movq %rax, %rdx
+(Register) -> (Mem)
+movq %rax, (%rdx)
+(Memory) -> (Register)
+mvq (%rax), %rdx    
+```
+
+```C
+temp = 0x4;
+*p = -147;
+
+temp2 = temp1;
+*p = temp;
+
+temp = *p;
+```
+__CANNOT do memory-memory transfer with a single instruction__
+
+
+###Memory Addressing
+__Normal__          __(R)__   __Mem[Reg[R]]__
+	Register R specifies memory adddress
+```
+movq (%rcx), %rax
+```
+
+__Displacemet__ __D(R)__  __Mem[Reg[R] + D]__
+Register R specifies the start of memory region
+constant displacement D specifies offset 
+
+movq 8(%rbp), %rdx
+//8 is the displacement here, we add 8 to %rbp 
+
+
+Example in using swap
+
+```C
+void swap (long *xp, long *yp) 
+{
+	long t0 = *xp;
+	long t1 = *yp;
+	*xp = t1;
+	*yp = t0;
+}
+```
+
+```Assembly
+swap:	
+	movq (%rdi), %rax
+	movq (%rsi), %rdx
+	movq %rdx, (%rdi)
+	movq %rax, (%rsi)
+	ret
+```
+1. Get the value from address specified by (%rdi)
+2. store the value into register %rax
+3. Get the value from address specified by (%rsi)
+4. store the value into register %rdx
+5. move the value stored in %rdx to the memory specified by (%rdi)
+6. move the value stored in %rax to the memory specified by (%rsi)
+
+
+###Complete Memory Addressing Modes
+
+__Most General Form__
+
+__D(Rb, Ri, S)__    __Mem[Reg[Rb] + S*Reg[Ri] + D]__
+
+D: constant 'displacement' 1,2, or 4 bytes
+Rb: Base register: any of the 16 integer registers
+Ri: index register: Any, except for %rsp
+S: Scale: 1, 2, 4, or 8
+
+###Address Computation Examples
+
+address:
+	
+    |%rdx :| 0xf000|
+	|%rcs :| 0x0100|
+
+expressions:
+
+| Expression     | Address Computation | Address |
+|----------------|:-------------------:|--------:|
+|  0x8(%rdx)     | 0xf000 + 0x8		   | 0xf008  |
+| (%rdx, %rcx)   | 0xf000 + 0x100      | 0xf100  |
+| (%rdx, %rcs, 4)| 0xf000 + 4*0x100    | 0xf400  |
+| 0x80 (,%rdx, 2)| 2*0xf000 + 0x80     | 0x1e080 |   
+
+
+##Arithemtic and Logical Instructions 
+
+1eaq Src, Dst,
+(load effective address): Src is the address mode expression
+			   			  Set Dst to address denoted by expression
+
+Computing addresses without a memory reference:
+translation of p = &x[i];
+computing arithemtic expressions of the form x + k * y
+k = 1, 2, 4, or 8 
+
+```C
+long m12(long x)
+{
+return x*12;
+}
+```
+
+```Assembly
+leaq (%rdi, %rdi, 2), %rax    # t <- x + x*2 
+salq $2, %rax                 # return t <<2 
+```
+
+(contrast movq and leaq)
+at 0x500: rax stores 619
+movq (%rax), rdx   # gives rdx the value of 619
+leaq (%rax), rdx   # gives rdx the value of 500 
+
+
+(image about examples of unary and binary operators)
+(image about aithmetic operations)
+
+
+```C
+long arith(long x, long y, long z)
+{
+	long t1 = x + y;
+	long t2 = z + t1;
+	long t3 = x + 4;
+	long t4 = y * 48;
+	long t5 = t3 + t4;
+	long rval = t2 * t5;
+	return rval;
+}
+
+```
+
+```Assembly
+arith:
+	leaq (%rdi, %rsi), %rax 	#t1
+	addq %rdx, %rax				#t2
+	leaq (%rsi, %rsi, 2), %rdx
+	salq $4, %rdx				#t4
+	leap 4(%rdi, %rdx), %rcx	#t5
+	imulq %rcs, %rax			#rval
+	ret
+```
+
+%rdi -- argument x 
+%rsi -- arguemnt y
+%rdx -- argument z 
+%rax -- t1, t2, rval
+%rdx -- t4
+%rcx -- t5
+
+leap: address computation
+salq: shift
+imulq: multiplication, but only used once. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
