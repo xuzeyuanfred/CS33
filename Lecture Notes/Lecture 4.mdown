@@ -1,0 +1,411 @@
+#Lecture 4
+#Machine Level Programming II: Control
+
+###Informatin about currently executing program:
+Temporary data (%rax, ...)
+Location of runtime stack (%rsp)       Current stack top
+location of current point (%rip)	   Instruction pointer
+status of recent tests (CF,ZF,SF,OF)   Condition Codes
+
+
+###Condition Codes(Implicit Setting)
+Single bit register:
+	CF:     Carry Flag(unsigned)  
+	SF:		Sign Flag(for signed)
+	ZF:     Zero Flag
+	OF: 	Overflow Flag(for signed)
+
+Implicit Set by arithmetic operations:
+	Example: addq Src,Dest <-> t = a+b
+	__CF set__ if carry out from most significant bit(unsigned overflow) 
+	__ZF set__ if t==0
+	__SF set__ if t<0 (as signed)
+	__OF set__ if two's complement (signed) overflow
+
+	(a>b && b>0 && t<0) || (a<0 && b<0 && t>=0)
+
+Not set by leaq instruction
+
+###Condition Codes(Explicit Setting: Compare)
+Explicit setting by compare instruction
+ cmpq Src2, Src1
+ cmpq b,a like computing a-b without setting destination
+
+ 	__CF set__ if carry out from most significant bit(used for unsigned comparisons)
+ 	__ZF set__ if a==b
+ 	__SF set__ if(a-b) < 0 (as signed)
+ 	__OF set__ if two's complement (signed) overflow 
+
+ 	(a>0 && b<0 && (a-b)<0) || (a<0 && b>0 && (a-b)>0)
+
+ ###Condition Codes (Explicit Setting: Test)
+ Explicit Setting by Test instruction
+  testq Src2, Src1
+  testq b,a like computing a&b without setting destination
+
+  Sets condition codes based on value of Src1 & Src2
+  Useful to have one of the operands by a mask
+
+  __ZF set__ when a&b == 0
+  __SF set__ when a&b < 0
+
+
+  ###Reading Condition Codes
+
+  SetX Instructions 
+  	Set low-order byte of destination to 0 or 1 based on combinations of condition codes 
+
+  	Does not alter remaining 7 bytes 
+
+  	| Set  | Condition     | Description              |
+  	|------|---------------|--------------------------|
+  	|sete  | ZF 		   | Equal/Zero 			  |
+  	|setne | ~ZF 		   | Not Equal/Not Zero 	  |
+  	|sets  | SF 		   | Negative 				  |
+  	|setns | ~SF 		   | Nonnegative 			  |
+  	|setg  |~(SF^OF)&~ZF   | Greater(Signed) 		  |
+   	|setge |~(SF^OF)       | Greater or Equal(Signed) |
+  	|setl  |(SF^OF)        | Less(Signed) 			  |
+  	|setle |(SF^OF) | ZF   | Less or Equal(unsigned)  |
+  	|seta  |~CF&~ZF        | Above(unsigned)	      |
+  	|setb  | CF            | Below(unsigned)          |
+
+ 
+ (image about x86-64 Integer Registers)
+
+ SetX Instructions: 
+ 	Set single byte based on combination of condition codes
+ One of addressable byte registers 
+ 	Does not alter remaining bytes 
+ 	Typically use movzbl to finish jobs
+ 	32 bit instructions also set upper 32 bit to 0
+
+ ```C
+ int gt (long x long y)
+ {
+ 	return x > y
+ }    
+```
+%rdi      : Argument x
+%rsi      : Argument y
+%rax      : Return Value
+
+```Assembly
+cmpq %rsi, %rdi    #compare x:y
+setg %al           #set when >, %al refers to %rax
+movzbl %al %rax    #Zero rest of %rax
+ret
+```
+
+###Jumping
+
+JX Instructions : jump to different part of code depending on condition codes
+
+| JX | Condition      | Description            	 |
+|----|----------------|--------------------------|
+|jmp | 1              |   Unconditional  	  	 |
+|je  | ZF     		  | Equal/Zero 			   	 |
+|jne | ~ZF 			  | Not Equal/Not Zero    	 |
+|js  | SF 			  | Negative 			  	 |
+|jns | ~SF 			  | Nonnegative 		  	 |
+|jg  | ~(SF^OF)&~ZF   | Greater(signed) 	   	 |
+|jge | ~(SF^OF) 	  | Greater or Equal(signed) |
+|jl  | (SF^OF) 		  | Less(signed) 			 |
+|jle | (SF^OF)| ZF 	  | Less or Equal(signed) 	 |
+|ja  | ~CF&~ZF 		  | Above(unsigned) 		 |
+|jb  | CF 			  | Below(unsigned) 		 |
+
+Condtional Example
+
+Generation:
+
+```shell
+shark> gcc -Og -S -fno-if-conversion control.c
+```
+```C
+long absdiff (long x, long y)
+{
+ 	long result;
+ 	if (x>y)
+ 		result = x-y;
+ 	else 
+ 		result = y-x;
+ 	return result;
+}
+```
+Use:
+	%rdi   : Argument X
+	%rsi   : Argument y
+    %rax   : Return value
+
+```Assembly
+absdiff: 	
+	cmpq %rsi, %rdi # x:y
+	jle  .L4
+	movq %rdi, %rax
+	subq %rsi, %rax
+	ret
+
+.L4:    # x <= y
+	movq %rsi, %rax
+	subq %rdi, %rax
+	ret
+```
+
+
+Expressing with Goto Code:
+C allows __goto__ statement 
+Jump to position designated by label
+
+```C
+long adbsdiff_j (long x, long y)
+{
+	long result;
+	int ntest = x <= y; 
+	if (ntest) goto Else;
+	result = x-y;
+	goto Done;
+Else:
+	result = y-x;
+Done: 
+	return result;
+}
+```
+
+Another way to do conditionals in C:
+
+```C
+val = x>y ? x-y : y-x;
+```
+Create separate code regions for then & else expressoins
+Execute appropriate one
+
+Conditional Move instructions
+if (Test) Dest <- Src
+supported in post-1995 x86 processors 
+GCC tries to use them But, only when known to be safe
+Reason: Branches are very disruptive to instruction flow through pipelines
+Conditonal moves do not require control transfer
+
+
+```C
+val1 = test
+	? Then_Expr
+	: Else_Expr
+```
+Goto Version 
+
+```C
+result = Then_Expr;
+eval = Else_Expr;
+nt = !Test;
+if (nt) result = eval;
+return result;
+```
+Another version of the absdiff
+
+```Assembly
+absdiff: 
+	movq %rdi, %rax   # x
+	subq %rsi, %rax   # result = x-y
+	movq %rsi, %rdx
+	subq %rdi, %rdx   # eval = y-x
+	compq %rsi, %rdi  # x:y
+	cmovle %rdx, %rax # if <=. result = eval
+	ret
+```
+
+Bad Cases for conditional Move
+
+Expensive Computations:
+
+```C
+val = Test(x) ? Hard1(x) : Hard2(x);
+```
+
+Both values get computed
+Only makes semse wjem computations are very simple 
+
+Risky Computations:
+
+```C
+val = p? *p : 0;
+```
+Both values got computed 
+May have undersirable effects
+
+Computations with side effects
+```C
+val = x > 0 ? x*=7 : x+=3
+```
+Both values get computed 
+Must be side-effect free
+
+
+
+##Loops 
+###"Do-While" Loop Example
+
+```C
+long pcount_do (unsigned long x)
+{
+  do {
+ 	 result += x & 0x1;
+ 	 x >>= 1; 
+  } while (x);
+  return result;
+}
+```
+
+goto version
+```C
+long pcount_goto (unsigned long x)
+{
+	long result = 0;
+	loop:
+	 result += x & 0x1;
+	 x >>= 1;
+	 if (x) goto loop;
+	 return result;
+}
+```
+Count number of 1's in argument x ("popcount")
+User conditional branch to either continue looping or to exit loop
+
+###"Do While" Loop Compillation
+
+Use:
+	%rdi : Argument x
+	%rax : result
+
+Assembly code for goto version:
+
+```Assembly
+   movl $0, %eax    # result = 0
+.L2: 
+   movq %rdi, %rdx
+   andl $1, %edx    # t = x & 0x1
+   addq %rdx, %rax  # result += t
+   shrq %rdi        # x >>= 1 
+   jne  .L2         # if (x) goto loop
+   rep; ret 
+```
+
+(image about general "Do-While" Translation)
+
+__"Just to Middle" Translation__
+
+```C
+long pcount_goto_jtm (unsigned long x)
+{
+	long result = 0;
+	goto test;
+  loop:
+    result += x & 0x1;
+    x >>= 1;
+  test: if (x) goto loop;
+  return result;
+}
+```
+
+__Generic__:
+```
+while (Test)
+	Body
+```
+equivalent to: 
+
+```
+	if (!Test)
+		goto done;
+	do 
+		Body
+		while(Test);
+done:
+```
+equivalent to:
+```
+	if (!Tets)
+		goto done;
+loop:
+	Body 
+	if (Test)
+		goto loop;
+done:
+```
+
+Example C code:
+```C
+long pcount_goto_dw (unsigned long x) 
+{
+	long result = 0;
+	if (!x) goto done;
+   loop:
+   	result += x & 0x1;
+   	x >>= 1;
+   	if (x) goto loop;
+   done:
+   	return result;
+}
+
+```
+
+###For Loop form
+```C
+#define WSIZE 8*sizeof(int)
+long pcount_for (unsigned long x)
+{
+	size_t i;
+	long result = 0;
+	for (i = 0; i < WSIZE; i++)
+	{
+		unsigned bit = (x >> i) & 0x1;
+		result += bit;
+	}
+	return result;
+}
+
+```
+###For Loop While Loop Conversion in C 
+
+###Switch Statement 
+
+```C
+long swtich_eg (long x, long y, long z)
+{
+	long w = 1;
+	switch(x) 
+	{
+		...
+	}
+	return w
+}
+
+```
+Use:
+	%rdi 	:  Argument x
+	%rsi    :  Argument y
+	%rdx 	:  Argument z
+	%rax 	:  Return value
+
+```Assembly
+switch_eg:
+	movq	%rdx, %rcx
+	cmpq    $6, %rdi      		 #x:6
+	ja	    .L8 			     #Use default 
+	jmp     *.L4(, %rdi, 8)      #goto JTab[x]
+```
+__JTab Structure:__
+Base Address is at .L4
+Each target has 8 bytes 
+
+__Jumping__
+Direct: jmp   .L8
+jump target is denoted as label .L8
+
+Indirect: jmp * .L4(, %rdi, 8)
+start of jump table: .L4
+must scale by factor of 8 (address are 8 bytes)
+Fetch target from effective Address .L4 + x*8
+only for 0 <= x <= 6
+
