@@ -1,0 +1,126 @@
+==================================================================
+Bitwise Operations - Right and Left Shift - Logical and Arithmetic
+==================================================================
+- Ian! D. Allen - idallen@idallen.ca - www.idallen.com
+
+Reference: http://en.wikipedia.org/wiki/Bitwise_operation
+
+In an arithmetic right shift (ARSH), the sign bit is shifted in on the
+left, thus preserving the sign of the operand.  In all other shifts,
+zeroes are shifted in as needed.  Here are a few examples:
+
+* Left Shift (LSH) 1 bit:   unsigned char x = x << 1;
+
+    Before:  00001000    ( =  8 decimal)
+    After:   00010000    ( = 16 decimal )
+
+    Before:  10010010
+    After:   00100100    ( one bit is "lost" off the top)
+
+* Logical Right Shift (RSH) 1 bit:  unsigned char x = x >> 1;
+
+    Before:  00001000    ( = 8 decimal )
+    After:   00000100    ( = 4 decimal )
+
+    Before:  01001001
+    After:   00100100    ( one bit is "lost" off the bottom )
+
+    Before:  10000001    ( = 129 decimal )
+    After:   01000000    ( = 64 decimal - one bit is "lost" off the bottom )
+
+* Arithmetic Left Shift: There is no Arithmetic Left Shift because it
+  would work just the same as a Logical Left Shift - use a Logical Left
+  Shift instead.
+
+* Arithmetic Right Shift (ARSH) 1 bit:  signed char x = x >> 1;
+  (Note: In C language, right shifts may or may not be arithmetic!)
+
+    Before:  00001000    ( = 8 decimal )
+    After:   00000100    ( = 4 decimal )
+
+    Before:  10000011    ( = -125 decimal in two's complement )
+    After:   11000001    ( = -63 decimal - one bit is "lost" off the bottom )
+    After:   11100000    ( = -32 decimal - one bit is "lost" off the bottom )
+    After:   11110000    ( = -16 decimal )
+    After:   11111000    ( = -8 decimal )
+    After:   11111100    ( = -4 decimal )
+    After:   11111110    ( = -2 decimal )
+    After:   11111111    ( = -1 decimal )
+    After:   11111111    ( = -1 decimal - one bit is "lost" off the bottom )
+
+    The "Right Shift (Arithmetic)" is useful when used on twos-complement
+    numbers.  The sign bit (leftmost bit) is replicated at the high end
+    of the number, instead of bringing in zeroes as with "Right Shift
+    (Logical)".  If the number is negative, replicating the sign bit
+    with "Right Shift (Arithmetic)" keeps it negative.
+    
+    Look at the 8-bit binary bit patterns below and note the differences
+    between Arithmetic Right Shift and Logical Right Shift:
+
+    11110111   (-9) arithmetic-right-shifted gives 11111011 (-5)
+    11110111           logical-right-shifted gives 01111011 (+123)
+
+    11111011   (-5) arithmetic-right-shifted gives 11111101 (-3)
+    11111011           logical-right-shifted gives 01111101 (+125)
+
+    11111101   (-3) arithmetic-right-shifted gives 11111110 (-2)
+    11111101           logical-right-shifted gives 01111110 (+126)
+
+    11111110   (-2) arithmetic-right-shifted gives 11111111 (-1)
+    11111110           logical-right-shifted gives 01111111 (127)
+
+    11111111   (-1) arithmetic-right-shifted gives 11111111 (-1)
+    11111111           logical-right-shifted gives 01111111 (+127)
+
+    01111111 (+127) arithmetic-right-shifted gives 00111111 (+63)
+    01111111           logical-right-shifted gives 00111111 (+63)
+
+    00000001   (+1) arithmetic-right-shifted gives 00000000 (0)
+    00000001           logical-right-shifted gives 00000000 (0)
+
+    Note that the Arithmetic shift (instead of the Logical) only makes
+    a difference if the sign bit is on before the shift.
+
+-------------------------------------------------------------------------------
+
+* A real C program using shifts and masking:
+
+/* C Program to decode the Unix/Linux/BSD return status of a command.
+ * If the command completes normally, the exit status is zero.
+ * If you interrupt it, you see a non-zero signal status.
+ * Compile and run this on a Unix or Linux or BSD system, e.g. ACADAIX:
+ *
+ *      $ cc thisfile.c
+ *      $ ./a.out
+ *      'sleep 5' terminated with exit status 0 and signal 0
+ *      $ ./a.out
+ *      ^C (Interrupt)
+ *      'sleep 5' terminated with exit status 0 and signal 2
+ *
+ * - Ian! D. Allen - idallen@idallen.ca - www.idallen.com
+ */
+#include <stdio.h>
+
+#define COMMAND "sleep 5"
+
+        int
+main( void ){
+        unsigned int status = system(COMMAND);
+
+        /* The command exit status is in top 8 bits.
+         * The signal that interrupted the command is in the bottom 8 bits.
+         */
+        unsigned int exitstatus = status >> 8;       /* Logical Right Shift */
+        unsigned int signalstatus = status & 0xFF;   /* Mask away top 8 bits */
+
+        printf("'%s' terminated with exit status %u and signal %u\n",
+                COMMAND, exitstatus, signalstatus);
+
+        return status;
+}
+
+-- 
+| Ian! D. Allen  -  idallen@idallen.ca  -  Ottawa, Ontario, Canada
+| Home Page: http://idallen.com/   Contact Improv: http://contactimprov.ca/
+| College professor (Free/Libre GNU+Linux) at: http://teaching.idallen.com/
+| Defend digital freedom:  http://eff.org/  and have fun:  http://fools.ca/
