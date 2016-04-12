@@ -1,0 +1,100 @@
+#Week 2 Discussion
+
+##GDB
+
+Compile with gcc
+``shell
+gcc -Og (filename)
+```
+argument into executables
+```shell
+./a.out {argument}
+```
+
+perform a core dump 
+```shell
+objdump -d {executable file}
+```
+
+start gdb
+```shell
+gdb {executable name}
+```
+
+show soruce code
+```shell
+list 
+list {filename}:{line #}
+```
+
+set arguments
+```shell
+set args {arg1 arg2 ...}
+```
+
+show argument 
+```shell
+show args
+```
+
+clear arguments 
+```shell
+set args
+```
+
+set breakpoint
+```shell
+break {line#}
+break {filename}:{line #}
+```
+
+display all break points 
+```shell
+info break
+```
+
+delete breakpoint
+```shell
+delete {# of breakpoint}
+```
+
+dumping a function
+```shell
+disassemble {function name}
+```
+//run the program
+run
+//step into next line
+step
+
+print the value of vairable/memory location/register
+```shell
+print {name of var/memloc/reg}
+```
+
+dump register
+```shell
+info registers
+```
+
+examine memory
+```shell
+x
+x {address in memory}
+```
+
+set watchpoints
+```shell
+watch {variable name}
+```
+
+continue running until hitting another breakpoint
+```shell
+continue
+```
+
+
+
+##Switch statement
+look into the book about assembly of switch statement   
+()
