@@ -1,0 +1,245 @@
+#Lecture 5: Machine Procedures 
+
+##x86-64 Stack
+
+__Region of mameory managed with stack disiciplines__
+__Grows toward lower addresses__
+__Register %rsp contains lowest stack address__
+address of "top" element 
+
+top of the stack is the lowest memory 
+
+###Push
+
+pushq Src
+	Fetch operand at Src
+	Decrement %rsp by 8
+	Write operand at address given by %rsp
+
+
+###Pop
+
+popq Dest
+	Read value at address given by %rsp
+	Increment %rsp by 8 
+	Store Value at Dest (must be register)
+
+###Code Example 
+
+```C
+void multstore (long x, long y, long *dest)
+{
+	long t = mult2(x,y);	
+	*dest = t;
+}
+
+long mult2(long x, long y)
+{
+	long s = x * y;
+	return s; 
+}
+
+```
+
+```Assembly
+	<multstore>			
+	push %rbx			#save %rbx
+	mov  %rdx, %rbx 	#save dest
+	callq <mult2>		#mult2(x,y)
+	mov  %rax, (%rbx)	#Save at dest
+	pop  %rbx			#Restore %rbx
+	retq
+
+	<mult2>
+	mov  %rdi, %rax     # a
+	imul %rsi, %rax		# a * b
+	retq
+```
+
+##Procedure Control Flow 
+Use stack to support procedure call and return 
+Procedure Call: __call label__
+
+push return address on stack 
+jump to label
+
+Return address: address of the next instruction right after call
+Procedure return: ret
+	Pop address from stack
+	Jump to address
+
+
+callq directs the call to the address (%rip) it has, which is mult2
+retq undones the call and goes back to the caller 
+
+###Procedure Data Flow 
+First 6 arguments: registers 
+(registers are used in this top-down order)
+%rdi
+%rsi
+%rdx
+%rcx
+%r8
+%r9
+return value: %rax 
+
+
+###Stack Based Language:
+C, Pascal, Java
+Code must be "Reentrant"
+Multiple simultaneous instantiations of single procedure 
+Need some place to store state of each instantiation
+	Arguments 
+	Local Variables 
+	Return pointer 
+Stack Discipline 
+	State for given procedure needed for limited time 
+	From when called to when return
+	Callee returns before caller does 
+Stack allocate in Frames 
+	state for single procedure instantiation
+
+###Stack Frames 
+Frame pointer : %rbp   (bot of proc)
+Stack Pointer : %rsp   (top of proc)
+Contents:
+	Return information 
+	Local storage (if needed)
+	Temporary space (if needed)
+
+Management: 
+	Space allocated when enter procedure 
+		"set up" code 
+		includes push by call instruction
+	Deallocated when return
+		Finish code 
+		includes pop by ret instruction 
+
+###x86-64 Linux Stack Frame 
+Current Stack Frames (Top to Bottom)
+"Argument Build": parameters for function about to call
+local variables: if cant keep in registers 
+saved register context 
+old frame pointer (optional)
+
+Caller Stack Frame 
+return address
+	Pushed by call instruction 
+Argument for this call
+
+
+###Example: incr 
+
+```C
+long incr(long *p, long val) 
+{
+	long x = *p;
+	long y = x + val;
+	*p = y;
+	return x;
+}
+```
+%rdi   : p 
+%rsi   : y, argument val
+%rax   : x, returned value
+
+```Assembly
+incr: 
+	movq (%rdi), %rax
+	addq %rax, %rsi
+	movq %rsi, (%rdi)
+	ret
+
+```
+
+
+###Stack caller example 
+
+
+
+
+###Register Saving Conventions 
+When procedure yoo calls who:
+	yoo is the caller
+	who is the calle 
+
+Conventions:
+	Caller saved:
+		Caller saves temporary values in its frame before the call
+	Callee saved:
+		Callee saves temporary values in its frame before using 
+		Callee restores them before returning to caller 
+
+	%rax: 
+		Return value 
+		Also caller-saved 
+		Can be modified by procedure 
+
+	%rdi ,..., %r9 
+		Arguments 
+		Also caller-saved 
+		Can be modified by procedures 
+
+	%r10, %r11
+
+
+	%rbx, %r12, %r13, %r14
+
+
+
+
+###Callee-saved example 
+	
+
+
+##Recursive Function 
+```C
+long pcount_r (unsigned long x) 
+{
+	if (x == 0)
+		return 0;
+	else 
+		return (x & 1) + pcount_r (x >> 1);
+}
+```
+
+```Assembly
+pcount_r:
+	movl 	$0 %eax
+	testq 	%rdi, %rdi
+	je		.L6
+	pushq 	%rbx
+	movq 	%rdi, %rbx
+	andl 	$1, %eax
+	shrq	%rdi
+	call 	pcount_r
+	addq	%rbx, %rax
+	popq	%rbx
+ .L6:
+ 	ret 
+```
+
+
+
+###Observations About Recursion 
+Handled without special consideration 
+	Stack frames mean that each function call has private storage 
+		Saved registers % local variables 
+		Saved return pointer 
+	Registers saving conventions prevent one function call from corrupting another's data 
+		Unless the C code explicitly does so (e.g. buffer overflow)
+	Stack discipline follows call/return pattern
+		Mutual recursion 
+		Last in first out 
+
+
+
+
+
+
+
+
+
+
+
+
