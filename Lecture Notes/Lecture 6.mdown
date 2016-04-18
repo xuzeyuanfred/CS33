@@ -173,9 +173,7 @@ ret
 ```
 
  r 	r+4*idx    
-------------------------
-|a 			|  i | next|
-------------------------
+
 offset of each structure member determined at compile time 
 compute as r + 4*idr 
 
@@ -199,13 +197,195 @@ void set_val (struct rec *r, int val)
 .L11:
 	movslq 	16(%rdi), %rax   #i = M[r+16], since r has 16 bytes
 	movl 	%esi, (%rdi, %rax, 4)
-	movq 	24(%rdi), %rdi   # r = M[r+24], r = r->next
+	movq 	24(%rdi), %rdi   # r = M[r+24], corresponds to r = r->next
 	testq 	%rdi, %rdi       # test if r == 0
 	jne 	.L11 			 # if !=0 goto loop 
 ```
 
+##Structure & Alignment 
+
+__Unaligned Data__
+just a combination of data types, each with its own size 
+__Aligned Data__
+Primitive data type requires k bytes
+Address must be multiple of k 
+Required on some machines, advised on x86-64
+
+__Motivation__
+Memory accessed by aligned chunks of 4 or 8 bytes (system dependent)
+Inefficient to load or store datum that spans quad word boundaries 
+Virtual memory trickier when datum spans 2 pages 
+
+__Compiler__
+inserts gaps in structure to ensure correct alignment of fields 
 
 
+###Specific Cases of Alignment 
+1 byte: char,...
+	no restriction on address 
+2 bytes: short 
+	lowest 1 but of address must be O2
+4 bytes: int, float, 
+	lowest 2 bits of address 00
+8 bytes: double. long, char*, 
+	lowest 3 bits of address 000
+16 bytes: long double 
+	lowest 4 bits must be 0000
+
+
+###In structure 
+1. specify each element's alignment requirement 
+2. Each strucutre has alignment requiremnt K = max(all elements of structure)
+3. Initial address & structure length must be multiples of K 
+
+i.e.
+
+```C
+struct S1 {
+	char c;
+	int i[2];
+	double v;
+};
+```
+in this case, K = 8 due to the type double.
+we have:
+
+------|---------|------|------|----------|--------------|
+  C	  | 3 bytes | i[0] | i[1] |  4 bytes |      v       |
+------|---------|------|------|----------|--------------|
+
+  1B  +   3B    +  4B  +  4B  +    4B    +      8B      = 24
+
+
+
+For largest alignment requirement K 
+Overall structure must be multiple of K 
+
+i.e.
+
+```C
+struct S2 {
+	double v;
+	int i[2];
+	char c
+} *p;
+```
+-------------|------|------|-----|------------|
+      V      | i[0] | i[1] |  C  |    7 bytes |
+-------------|------|------|-----|------------|
+
+
+###Array of Structures 
+overall length multiple of K
+satisfying alignment requirement for every element 
+
+```C
+struct S3 {
+	short i;
+	float v;
+	short j;
+} a[10];
+```
+total size of a[10] = 10 * sizeof(S3) = 10 * (12) = 120
+K = 4 due to the float type 
+
+__Accessing Memory__
+
+-----|----------|------|-----|----|
+ i   |  2 byte  |	 v |  j  | 2B |
+-----|----------|------|-----|----|
+Compute array offset 12 * idx
+size of(S3), including alignment spacers
+Element j is at offset 8 within structure 
+Assembler gives offset a + 8 
+
+```C
+short get_j (int idx)
+{
+	return a[idx] * j;
+}
+```
+%rdi : idx
+
+```Assembly
+leaq (%rdi, %rdi, 2), %rax    
+movzwl a+8(, %rax, 4), %eax
+```
+
+__Saving Space__: put large data types first in structure declaration 
+then all alignment memory will be added to the tail 
+
+
+##Floating Point 
+
+###FP Basics:
+Argument passed in %xmm0, %xmm1, ...
+result returned in %xmm0
+All XMM registers caller-saved 
+
+```C
+float fadd(float x, float y)
+{
+	return x + y;
+}
+
+double dadd(double x, double y)
+{
+return x + y;
+}
+```
+x in %xmm0, y in %xmm1
+
+```Assembly
+addss 	%xmm1, %xmm0
+ret 
+
+addsd 	%xmm1, %xmm0
+ret 
+```
+
+###FP memory referencing 
+integer and pointer arguments passed in regular registers 
+FP values passed in XMM registers 
+Different mov instructions to move between XMM registers and between memory and XMM registers
+
+```C
+double dincr (double *p, double v)
+{
+	doble x = *p;
+	*p = x + v;
+	return x;
+}
+```
+p in %rdi, v in %xmm0
+
+```Assembly
+movapd 	%xmm0, %xmm1
+movsd 	(%rdi), %xmm0 
+addsd   %xmm0, $xmm1 
+movsd 	%xmm1, (%rdi)
+ret
+```
+
+Floating Point Comparison:
+	ucomiss ucomisd 
+	CF, ZF, and PF
+Set XMM0 register to 0 with instruction 
+xorpd %xmm0, %xmm0
+Others loaded from memory 
+
+###Summary 
+Arrays:
+	elements packd into contiguous region of memory 
+	use index arithmetic to locate individual elements 
+Structs:
+	Elements packed into single region of memory 
+	Access using offset determined by compiler 
+	Possible require internal and external padding to ensure alignment
+Combinations:
+	can nest structs and array code arbitrarily 
+Floating Point:
+	Data held and operated on in XMM registers
 
 
 

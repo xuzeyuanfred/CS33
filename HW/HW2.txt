@@ -80,7 +80,7 @@ long switch_prob(long x, long n) {
 			result = x * 8;				//lea 0x0(, %rdi, 8), %rax
 			break;
 		case 63: 
-			result = x; 				//mov %rax, %rdi
+			result = x; 				//mov %rdi, %rax
 			result >>= 0x3; 			//sar $0x3, %rax
 			break;
 		case 64:
