@@ -196,7 +196,7 @@ void set_val (struct rec *r, int val)
 ```Assembly 
 .L11:
 	movslq 	16(%rdi), %rax   #i = M[r+16], since r has 16 bytes
-	movl 	%esi, (%rdi, %rax, 4)
+	movl 	%esi, (%rdi, %rax, 4)   #esi, since using integer
 	movq 	24(%rdi), %rdi   # r = M[r+24], corresponds to r = r->next
 	testq 	%rdi, %rdi       # test if r == 0
 	jne 	.L11 			 # if !=0 goto loop 
@@ -206,6 +206,16 @@ void set_val (struct rec *r, int val)
 
 __Unaligned Data__
 just a combination of data types, each with its own size 
+
+```C
+struct S1 {
+	char c;
+	int i[2];
+	double v;
+} *p;
+```
+will just be a chunk of 17 byte memory, without alignment
+
 __Aligned Data__
 Primitive data type requires k bytes
 Address must be multiple of k 
@@ -242,11 +252,15 @@ i.e.
 
 ```C
 struct S1 {
-	char c;
-	int i[2];
-	double v;
-};
+	char c; 	 	// 1 byte 		
+					// 3 byte padding
+	int i[2]; 		// 4 byte + 4 byte
+					// 4 byte padding
+	double v; 		// 8 byte 
+} *p;
 ```
+
+
 in this case, K = 8 due to the type double.
 we have:
 
@@ -256,7 +270,7 @@ we have:
 
   1B  +   3B    +  4B  +  4B  +    4B    +      8B      = 24
 
-
+Byte alignment 
 
 For largest alignment requirement K 
 Overall structure must be multiple of K 
@@ -265,7 +279,7 @@ i.e.
 
 ```C
 struct S2 {
-	double v;
+	double v; 		
 	int i[2];
 	char c
 } *p;
@@ -280,10 +294,24 @@ overall length multiple of K
 satisfying alignment requirement for every element 
 
 ```C
+struct s2 {
+	double v; 		// 8 byte
+
+	int i[2]; 		// 8 byte
+	char c; 		// 1 byte
+					// 7 byte padding
+} a[10];
+```
+in this case, the size of S2 is 240 
+which is 10 * (8 + 4 + 4 + 1 + 7)
+
+```C
 struct S3 {
-	short i;
-	float v;
-	short j;
+	short i;    // 2 byte
+				// 2 byte padding
+	float v;	// 4 byte
+				// 2 byte padding
+	short j; 	// 2 byte padding
 } a[10];
 ```
 total size of a[10] = 10 * sizeof(S3) = 10 * (12) = 120
@@ -291,12 +319,13 @@ K = 4 due to the float type
 
 __Accessing Memory__
 
------|----------|------|-----|----|
- i   |  2 byte  |	 v |  j  | 2B |
------|----------|------|-----|----|
+-----|----------|------------|-----|----|
+ i   |  2 byte  |	 V       |  j  | 2B |
+-----|----------|------------|-----|----|
 Compute array offset 12 * idx
 size of(S3), including alignment spacers
 Element j is at offset 8 within structure 
+(i = 2 byte, v is 4 bytes long)
 Assembler gives offset a + 8 
 
 ```C
@@ -313,7 +342,27 @@ movzwl a+8(, %rax, 4), %eax
 ```
 
 __Saving Space__: put large data types first in structure declaration 
-then all alignment memory will be added to the tail 
+then all alignment memory will be added to the tail (only padding in the last element)
+example:
+
+```C
+struct s4 {
+	char c; 	// 1 bytes
+				// 3 byte padding
+	int i; 		// 4 bytes
+	char d;		// 1 byte
+				// 3 byte padding
+}; *p
+```
+
+```C
+struct S5 {
+	int i; 		// 4 byte
+	char c; 	// 1 byte
+	char d; 	// 1 byte 
+				// 2 byte padding
+} *p;
+```
 
 
 ##Floating Point 

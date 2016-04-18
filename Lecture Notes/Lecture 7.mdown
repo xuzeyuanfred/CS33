@@ -76,3 +76,115 @@ gdb testbuff
 
 
 
+##Union
+
+Allocate according to largest element 
+Can only use one field at a time 
+
+```C
+union U1 {
+	char c;
+	int i[2];
+	double v; 
+} *up;
+```
+```C
+struct S1 {
+	char c;
+	int i[2];
+	double v;
+} *sp;
+```
+Union vs Struct; while the memory allocation for a struct is linear 
+Union is more like a stack way of storing memory 
+
+###Accessing Bit Patterns
+```C
+typedef union {
+	float f;
+	unsigned u;
+}bit_float_t;
+```
+|----|
+| U  |
+|----|
+| f  |
+|----|
+0    4 
+
+```C
+float bit2float(unsigned u)
+{
+	bit_float_t arg;
+	arg.u = u;
+	return arg.f; 
+}
+```
+```C
+unsigned float2bit (float f)
+{
+	bit_float_t arg;
+	arg.f = f;
+	return arg.u;
+}
+```
+same 64 bits viewed in 2 different ways 
+returned result of bit2float and float2bit:
+not the same, even they have the same memory address 
+however, we can't use different elements in a union at once
+revising a value in union will affect others 
+
+###Byte Ordering 
+
+Big Endian : 	Most significant byte has lowest address 
+
+Little Endian : 	Least significant byte has lowest address
+(x86, ARM Android, iOS)
+
+Bi Endian : ARM
+
+```C
+union {
+	unsigned char c[8];
+	unsigned short s[4];
+	unsigned int i[2];
+	unsigned long l[1];
+} dw;
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
