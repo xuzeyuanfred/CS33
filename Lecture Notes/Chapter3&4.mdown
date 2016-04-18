@@ -1,1 +1,446 @@
 #Chapter 3 & 4 CS33
+
+Machine encoding are architecture specific: here we are studyiing the x86-64 machine architecture 
+
+__Program Counter__: commonly known as PC, called %rip in x86-64. indicating the address in memory of the next instruciton to be executed.
+
+__Integer Register File__: contains 16 named locations atoring 64-bits values. These registers can hold address(Pointer) or integers data. 
+
+__Condition Code register__: status informtaion abuot most recently executed arithemtic or logical instruciton 
+
+__Vector Registers__: used to hold one or more integers or float-point values.
+
+A program memory contains the executable machine code for the program,
+some information required by the OS,
+a run-time stack for managing procedure calls and returns,
+blocks of memory allocated by the user. (dynamic memory)
+
+
+
+Suppose we have a file mstore.c 
+
+to see its assembly code, use gcc to disassmeble it. 
+
+```Terminal
+gcc -Og -c mstore.c 
+```
+will give us the machine code for the program 
+
+to see the relationship between the assembly code and the machine code, use 
+```Terminal
+objdump -d mstore.o
+```
+
+Now, an example 
+```C
+long mult2(long a,long b)
+{
+	long s = a * b;
+	return s; 
+}
+
+void multstore(long x, long y, long *dest)
+{
+	long t = mult2(x,y);
+	*dest = t; 
+}
+
+
+int main()
+{
+	long d;
+	multstore(2, 3, &d);
+	printf("2 * 3 -> %ld\n", d);
+	return 0;
+}
+```
+To create an executable based on the c code, use the following: 
+
+```Terminal
+gcc -Og -o prog main.c mstore.c 
+
+objdump -d prog 
+```
+this gives us the assembly 
+
+```Assembly
+multstore:
+	pushq  %rbx 			: save %rbx
+	movq   %rdx, %rbx		: copy dest to %rbx
+	call   40058b <mult2>	: call mult2(x,y)
+	movq   %rax,(%rbx)		: Store result at *dest
+	popq   %rbx 			: restore %rbx
+	retq					: return 
+```
+
+###Data Format 
+The datatype and their memory storage table is printed in previous lecture note.
+
+###Accessing Memory
+An x86-64 CPU contains a set of 16 general purpose registers storing 64 bits values. they can be used to store integer and pointer data. 
+IA32 : 32 bits registers; labeled %eax through %ebp 
+x86-64: 8 64 bits registers; labeled %rax through %rbp 
+		Expansion %r8 through %r15 
+
+###Operand Specifier 
+$ : immediate constants 
+% : registers  R[ra]
+%() : memory reference Mb[Addr], as an array 
+
+Address computation: Imm(rb, ri, s)
+	Imm : the immediate offset
+	rb  : a base register
+	ri  : an index register
+	s 	: scale factor (1,2,4,8)
+	computation of address : Imm + R[rb] + R[ri] * s 
+
+Practice 3.1  (page 325)
+0x100, 0xAB, 0x108, 0xFF(address 0x100), 0xAB(address 0x104), 0x11 (address 0x10C), 0x13(address 0x108), 0xFF (address 0x100), 0x11(address 0x10C)
+
+
+
+##Data Movement Instructions 
+Mov S, D  : S -> D 
+movb  : move byte
+movw  : move words (2 bytes)
+movl  : move double word (4 bytes)
+movq  : move quad word  (8 bytes)
+
+
+
+
+
+
+movabsq $0x0011223344556677, %rax   : %rax = 0011223344556677
+movb    $-1, %al 					: %rax = 00112233445566FF
+movw    $-1, %ax					: %rax = 001122334455FFFF
+movl    $-1, %eax 					: %rax = 00112233FFFFFFFF
+movq    $-1, %rax 					: %rax = FFFFFFFFFFFFFFFF
+
+
+Move S, R   SignExtend(S) -> R : move with sign extension 
+			Change the 's' to 'z', we obtain zero extension
+	movsbw  : move sign-extended byte to word 
+	movsbl 	: move sign-extended byte to doble word 
+	movswl  : move sign-extended word to double word 
+	movsbq  : move sign-extended byte to quad word 
+	movswq  : move sign-extended word to quad word 
+	movslq  : move sign-extended double word to quad word
+
+Problem 3.2 (page 325)
+memory references in x86-64 are always given with quad word registers. 
+even if the operand is byte,single word, or double word
+
+movl %eax, (%rsp)
+movw (%rax), %dx
+movb $0xFF, %bl
+movb (%rsp, %rdx, 4), %dl
+movq (%rdx), %rax 
+movw  %dx, (%rax)
+
+
+Problem 3.3 (326)
+(%ebx) exceeds 1 byte 
+...
+
+###Data Movement Example 
+
+```C
+long exchange (long *xp, long y)
+{
+	long x = *xp;
+	*xp = y;
+	return x;
+}
+```
+	xp in %rdi, y in %rsi
+
+```Assembly
+exchange:
+	movq (%rdi), %rax        : get x at xp, set as return value 
+	movq %rsi, (%rdi)        : store y at xp
+	ret 
+```
+
+Problem 3.3, 3.5 (327)
+
+###Stack 
+
+"top" of the stack is shown at bottom. WIth x86-64, stack grow towards lower address. pushing is thus decrementing stack pointer (%rsp) and storing to memory, while popping involvs reading from memory and incrementing the stack pointer. 
+
+subq $8, %rsp    : decrement stack pointer
+movq %rbp, (%rsp)   : store %rbp on stack
+movq (%rsp), %rax   : read %rax from stack
+addq $8, %rsp       : increment stack pointer 
+
+###Arithmetic and Logical Operations 
+__Load Effective Address__ 
+leaq : a variant of movq instruction. reads from a memeory to a register, it doesn't reference the memory, but simply copy the effectice address to the destination. 
+
+leaq 7(%rdx, %rdx, 4), %rax   : will set %rax to 5x + 7 
+
+Problem 3.6, 3.7, 3.8 (327)
+
+Example:
+
+```C
+long arith(long x, long y, long z)
+{
+	long t1 = x ^ y;
+	long t2 = z * 48;
+	long t3 = t1 & 0x0F0F0F0F;
+	long t4 = t2 - t3;
+	return t4;
+}
+```
+x in %rdi, y in %rsi, z in %rdx
+
+```Assembly 
+arith:
+	xorq  %rsi, %rdi  				: t1 = x ^ y
+	leaq  (%rdx, %rdx, 2), %rax  	: 3*z 
+	salq  $4, %rax 					: t2 = 16 * (3*z)
+	andl  $252645135   				: t3 = t1 & 0x0F0F0F0F
+	subq  %rdi, %rax 				: return t2 - t3
+	ret 
+```
+
+##Machine Level Control 
+The CPU maintains a set of single-bit condition code registers descrbing attributes of the most recent arithemtic or logical operation. These registers can then be tested to perform conditional branches:
+
+CF : carry flag, generated when operation needs carry out of the most significant bit. 
+
+ZF: zero flag, the most recent operation yielded to zero.
+
+SF: sign flag. the most recent operation yielded to negative value.
+
+OF: overflow flag. The most rencent oeration caused a two's complement overflow-either negative or positive
+
+__Example:__
+if t = a + b, then 
+
+CF      (unsigned) t < (unsigned) a    Unsigned overflow 
+ZF      (t == 0)					   Zero 
+SF      (t < 0)						   Negative 
+OF      (a < 0 == b < 0) && (t < 0 != a < 0) Signed overflow 
+
+leaq does not invoke any condition codes to be set, but others do. 
+
+###Jump Instruction 
+
+Instruction 	Description    Jump Condition
+
+jmp Label 		Direct Jump 	 1
+jmp *Operand 	indirect jump 	 1
+je 	Label 		Equal/zero       ZF 
+jne Label       != | !=0  		 ~ZF
+js  Label 		 < 0  			 SF 
+jns Label  		 >= 0 			 ~SF
+jg  Label  		 > 				 ~(SF ^ OF) & ~ZF
+jge Label        >=   			 ~(SF ^ OF) 
+jl  Label  		 < 				 SF ^ OF 
+jle Label  		 <=  			 (SF ^ OF) | ZF
+ja  Label 		 unsigned >      ~CF & ~ZF
+jae Label  		 unsigned >=     ~CF
+jb  Label   	 unsigned <  	 CF
+jbe Label  		 unsigned <=     CF | ZF 
+
+
+
+```Assembly 
+mov  	%rdi, %rax
+Jump 	8 <loop+0x8>
+sar 	%rax 
+test 	%rax, %rax
+jg 	 	5 <loop+0x5>
+repz retq 
+```
+
+###If else, goto, assembly 
+
+```C
+//Original C code 
+long lt_cnt = 0;
+long ge_cnt = 0;
+
+long absdiff_se (long x, long y)
+{
+	long result;
+	if (x < y) {
+		lt_cnt ++;
+		result = y - x; 
+	}
+	else {
+		ge_cnt ++;
+		result = x - y;
+	}
+	return result;
+}
+```
+
+```C
+//goto version equivalence
+long gotodiff_se(long x, long y)
+{
+ 	long result;
+ 	if (x >= y)
+ 		goto x_ge_y;
+ 	it_cnt ++;
+ 	result = y - x;
+ 	return result;
+ x_ge_y:
+ 	ge_cnt++;
+ 	result = x - y;
+ 	return result;
+}
+
+```
+x in %rdi, y in %rsi 
+
+```Assembly 
+absdiff_se:
+	cmpq 	%rsi, %rdi 			:	compare x : y
+	jge 	.L2  				:	goto x_ge_y if >=
+	addq    $1, lt_cnt(%rip) 	:	lt_cnt++;
+	movq 	%rsi, %rax 				
+	subq 	%rsi. %rax 			:	result = y - x
+	ret 						:	return
+.L2:							:	x_ge_y:
+	addq    $1, ge_cnt(%rip) 	:	ge_cnt ++;
+	movq    %rdi, %rax 
+	subq    %rsi, %rax 			:	result = x - y
+	ret 						:	Return 
+```
+
+###Another Example 
+```C
+//Original Co code
+long absdiff(long x, long y)
+{
+	long result;
+	if (x < y)
+		return = y - x;
+	else 
+		return = x - y;
+	return result;
+}
+```
+
+```C
+//Implementation using Conditional Assignment 
+long cmovdiff(long x, long y)
+{
+	long rval = y - x;
+	long eval = x - y;
+	long ntest = x >= y ;
+	if (ntest) rval = eval;
+	return rval;
+}
+```
+x in %rdi, y in %rsi
+
+```Assembly
+absdiff:
+	movq 	%rsi, %rax			
+	subq 	%rdi, %rax   		: rval = y - x 
+	movq  	%rdi, %rdx 			
+	subq    %rsi, %rdx 			: eval = x - y
+	cmpq    %rsi, %rdi 			: compare x : y 
+	cmovge  %rdx, %rax 			: if >= , rval = eval 
+	ret 						: return rval 
+```
+
+
+###Loop
+__for a "do while" loop__ 
+n in %rdi
+```Assembly 
+fact_do:
+	movl 	$1, %rax    	: set result = 1
+.L2:						: loop :
+	imulq	%rdi, %rax 		: Compute result *= n
+	subq  	$1, %rdi 		: Decrement n
+	cmpq 	$1, %rdi 		: compare n : 1
+	jg 		.L2 			: if >, goto loop
+	rep; ret 			 	: return
+```
+reverse enginnering a loop. the key step is to find the mapping between registers and variables.
+
+
+__Assembly for a while loop:__
+n in %rdi
+```Assembly
+fact_while:
+	movl     $1, %eax 		set result = 1
+	jmp 	 .L5 			Goto test 
+.L6:						loop:
+	imulq    %rdi, %rax 	compute result *= n
+	subq     $1, %rdi 		decrement n 
+.L5: 						test: 
+	cmpq     $1, %rdi 		compare n : 1
+	jg 		  .L6 			if >, goto loop
+	rep;ret 				return 
+```
+
+For a for loop, the assembly code is similar to its while loop equivalence 
+
+__Assembly for a for loop:__
+n in %rdi 
+```Assembly 
+fact_for:
+	movl 	$1, %eax 		set result = 1 
+	movl 	$2, %edx 		set i = 2 
+	jmp 	.L8 			Goto test 
+.L9:
+	imulq 	%rdx, %rax 		compute result *= i 
+	addq 	$1, %rdx   		Incremnt i 
+.L8:
+	cmpq 	%rdi, %rdx 		Compare i : n
+	jle 	.L9 			if <=, goto loop
+	rep; ret 				return 
+```
+
+
+###Switch Statement 
+
+a case equivalent to with multiple if else statements 
+__Assembly for a switch statement:__
+x in %rdi, n in %rsi, dest in %rdx 
+
+```Assembly
+swithc_eg:
+	subq 	$100, %rsi 			Compute index = n-100
+	cmpq 	$6, %rsi 			Compare index : 6
+	ja 		.L8 				if >, goto loc_def 
+	jmp 	*.L4(,%rsi,8) 		Goto *jg[index]
+.L3: 
+	leaq 	(%rdim %rdi, 2), %rax 	3*x
+	leaq 	(%rdi, %rax, 4), %rdi 	val = 13*x 
+	jmp .L2 						goto done 
+.L5:
+	addq 
+	//go back here 
+```
+
+##Procedures 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

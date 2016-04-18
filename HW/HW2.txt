@@ -1,0 +1,111 @@
+HW2.txt
+
+Name: Zeyuan Xu 
+ID: 004255573	
+
+3.60
+
+|-------------------------|
+|	register |   variable |
+|------------|------------|
+|   %esi     |    n       |
+|   %ecx     |    n       |
+|   %edx     |    mask    |
+|	%eax     |    result  |
+|	%rdi     |    x       |
+|   %r8      |    x       |
+|	%rdx     | 	  mask    | 
+|   %rax     |    result  | 
+|   %cl      |    n&0xFF  |
+|------------|------------|
+
+C code:
+
+long loop (long x, long y)
+{
+	long result = 0;
+	long mask;
+	for (mask = 1; mask != 0; mask = mask << (n&0xFF))
+	{
+		result |= (mask & x);
+	}
+	return result; 
+}
+
+A. x : %rdi, then moved to %r8
+   n : %esi, then to %ecx
+   result : %eax , %rax 
+   mask : %edx , %rdx 
+
+B. result = 0;
+   mask = 1; 
+
+C. mask != 0; the assembly is testq %rdx, %rdx 
+
+D. mask << (n & 0xFF )
+	shift by the counter's least significant byte 
+
+E. result |= (mask & x)
+
+F. as shown above 
+
+
+
+
+3.63 
+
+least case of the switch statement: 0x3C = 60
+max value for n is 65 (0x3C + 0x5)
+if greater than 65, jump to default 
+default (4005c3) : result = x + 0x4b(75)
+All followings are obtained by observing the jump table
+case 60: lea 0x0(,%rdi, 8), %rax : result = x * 8
+		break;
+case 61: same as default case 
+case 62: same as 60
+case 63: aa to b1
+case 64: b2 to c7
+case 65: bf to c7 
+case default: result = x + 75
+
+
+long switch_prob(long x, long n) {
+	long result = x; 
+	switch(n)
+	{
+		case 60:
+			result = x * 8; 			//lea 0x0(, %rdi, 8), %rax
+			break;
+		case 62:
+			result = x * 8;				//lea 0x0(, %rdi, 8), %rax
+			break;
+		case 63: 
+			result = x; 				//mov %rax, %rdi
+			result >>= 0x3; 			//sar $0x3, %rax
+			break;
+		case 64:
+			result = x;					//mov %rdi, %rax
+			result <<= 0x4;				//shl $0x4, %rax
+			result -= x;				//sub %rdi, %rax
+			x = result;         		//mov %rax, %rdi
+			x = x * x; 					//imul %rdi, %rdi
+			result = x + 75; 			//lea 0x4b(%rdi),%rax
+			break; 						//retq 
+		case 65:
+			x = x * x; 					//imul %rdi, %rdi
+			result = x + 75; 			//lea 0x4b(%rdi),%rax
+			break;
+		default:
+			result = x + 75;			//lea 0x4b(%rdi),%rax
+	}
+	return result;
+}
+ 
+
+
+
+
+
+
+
+

@@ -1,0 +1,78 @@
+#Lecture 5: Machine-Level Programming V: Advanced Topics
+
+
+Bug Example:
+```C
+typedef struct {
+	int a[2];
+	double d;
+} struct_t;
+
+double fun(int i) {
+	volatile struct_t a;
+	s.d = 3.14;
+	s.a[i] = 1073741824; //possibly out of bounds
+	return s.d;
+}
+```
+
+if call fun(6), it gives us a __segmentation fault__
+To exceed the capacity of the memory allocated is called 
+a "Buffer Overflow"
+this is the #1 technical cause of security vulnerabilities 
+#1 overall cause is social engineering / user ignorance
+
+Most Common Form: 
+Unchecked lengths on string inputs 
+particularly for bounded character arrays on the stack 
+	Sometimes referred to as stack smashing
+
+```C
+//Get string from stdin
+char *gets(char *dest)
+{
+	int c = getchar();
+	char *p = dest;
+	while (c != EOF && c != '\n') {
+		*p++ = c;
+		c = getchar();
+	}
+	*p = '\0';
+	return dest;
+}
+```
+There is no way to specify limit on number of characters to read 
+Similar problems with other library functions:
+__strcpy, strcat,__
+__scanf, fscanf, sscanf__
+
+Vulnerable Buffer Code
+
+```C
+void echo()
+{
+	char buf[4];   //way to small 
+	gets(buf);
+	puts(buf);
+}
+
+int main(int argc, char* argv[ ])
+{
+	echo();
+	return 0;
+}
+```
+
+If the inputs are 3 chars long, then there is no problem,
+however if inputs exceed the 4 char limit, we get a Segmentation Fault
+Now, Debug with gdb 
+
+
+```shell
+gdb testbuff
+(gdb)break main
+(gdb)dsassemble main 
+```
+
+
+
