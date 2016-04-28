@@ -336,7 +336,19 @@ salq: shift
 imulq: multiplication, but only used once. 
 
 
+###List of Arithemtic Operations 
 
+| Format   		 |   Computation     |
+|----------------|-------------------|
+|addq Src, Dest  | Dest = Dest + Src |
+|subq Src, Dest  | Dest = Dest - Src |
+|imulq Src, Dest | Dest = Dest * Src |
+|salq Src, Dest  | Dest = Dest << Src|
+|sarq Src, Dest  | Dest = Dest >> Src|
+|shrq Src, Dest  | Dest = Dest >> Src|
+|xorq Src, Dest  | Dest = Dest ^ Src |
+|andq Src, Dest  | Dest = Dest & Src |
+|orq  Src, Deat  | Dest = Dest | Src |
 
 
 

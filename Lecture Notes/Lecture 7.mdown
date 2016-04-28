@@ -1,6 +1,31 @@
 #Lecture 5: Machine-Level Programming V: Advanced Topics
 
 
+##Memory 
+
+the stack grows from high address to low address 
+(i.e. 0x007FFFFF to 0x0)
+Runtime stack (8MB limit)
+     |
+     |
+    Shared Library
+     |
+     |
+    Heap
+The heap stores dynamically allocated variables
+used when malloc(), calloc(), new() are called
+	 |
+	 |
+	Data
+Data are statically allocated
+e.g. global vars, static var, string constants
+	 |
+	 |
+ 	Text / Shared Libraries
+ Executable machine instructions
+ read only
+
+
 Bug Example:
 ```C
 typedef struct {
@@ -43,8 +68,8 @@ char *gets(char *dest)
 ```
 There is no way to specify limit on number of characters to read 
 Similar problems with other library functions:
-__strcpy, strcat,__
-__scanf, fscanf, sscanf__
+__strcpy, strcat__: Copy string of arbitrary length
+__scanf, fscanf, sscanf__: when given %s conversion specification
 
 Vulnerable Buffer Code
 
@@ -68,12 +93,87 @@ however if inputs exceed the 4 char limit, we get a Segmentation Fault
 Now, Debug with gdb 
 
 
-```shell
-gdb testbuff
-(gdb)break main
-(gdb)dsassemble main 
-```
+Code Injection:
+input string contains byte representation of executable bytes
+overwrite return address A with address of buffer B
+when Q executes ret, will jump to exploit code
 
+__Buffer overflow bugs can allow remote machines to execute arbitrary code on victim machine__
+
+original internet worm: 
+finger "exploitcode padding new-return-address"
+A worm is a program that can run by itself, and can propagate a fully working version of itself to other computers 
+A virus is a code that adds itself to other programs 
+and does not run independently
+
+
+###1. Avoid Buffer Overflow in Code
+
+```C
+void echo()
+{
+	char buf[4];
+	fgets(buf, 4, stdin); 
+	puts(buf);
+}
+```
+fgets instead of gets
+strncpy instead of strcpy 
+Don't use scanf with %s conversion specification
+use fgets to read the string
+or use %ns whrere n is suitable integer
+
+
+###2. System-Level protection
+Rnadomized stack offsets:
+At start of program, allocate random amount of space on stack
+Shifts stack address for entire program
+make it difficult for hacker to predict beginning of inserted code.
+stack repositioned each time program executes
+
+X86-64 added explicit execute permission. stack marked as non-executable
+
+
+###Stack Canaries can help
+__Idea__: place special value ("canary") on stack just beyong buffer
+		  Check for corruption before exiting function
+__GCC Implementation__:
+		-fstack-protector	
+
+```Assembly
+sub 	0x18, %rsp
+mov 	%fs:0x28, %rax 				 	#get canary
+mov 	%rax, 0x8(%rsp) 				#place on stack
+xor 	%eax, %eax 						#erase canary
+mov 	%rsp, %rdi
+callq 	4006e0 <gets>
+mov 	%rsp, %rdi
+callq 	400570 <puts@plt>
+mov 	0x8(%rsp), %rax
+xor 	%fs:0x28, %rax 					#compare to canary
+je 		400768<echo + 0x39> 			#if same, OK
+callq 	400580<__stack_chk_fail@plt> 	#Fail
+add 	$0x18, %rsp
+retq
+```
+###Return-Oriented Programming Attacks
+__Challenge(for hackers)__
+Stack randomization makes it hard to predict buffer location
+Marking stack nonexecutable makes it hard to insert binary code
+__Alternate Strategy__
+Use existing code
+	library code from stdlib
+String together fragments to achieve overall desired outcome
+Does not overcome stack canaries
+__Construct program from gadgets__
+sequence of instructions ending in ret
+	Encoded by single byte 0xc3
+Code position fixed from run to run
+Code is executable
+
+__ROP Execution__
+Trigger with ret instruction
+Final ret in each gadget will start next one
 
 
 ##Union
@@ -154,12 +254,40 @@ union {
 
 
 
+#Aside 
 
+RSP  (stack pointer) top
+ |
+Stack Memory / buffer space 	: code chunk
+ |
+RBP (base pointer) base 		: code chunk
+ |
+return address 					: exploit code
 
+(gdb) disassemble main
 
+(gdb) break (after strcpy)
 
+(gdb) run $(python -c "print('A' * 256)")
 
+(gdb) x/200xb $esp
 
+(gdb) quit
+
+(gdb) run $(python -c "print('A' * 260)")
+
+(gdb) run $(python -c "print('A' * 264)")
+
+(gdb) run $(python -c "print('A' * 268)")  
+//until it overflows the buffer
+//gives segmentation fault
+//base pointer points to a new address
+(gdb) run $(python -c "print('A'* 268 + 'BBBB')")
+//gives 0x42424242 in ??
+//buffer ends at 268 (buffer size)
+//now add shellcode after the buffer size
+
+(gdb) run $python -c "print('\x90\' * 200 + shellcode + 'beginning address')")
 
 
 
