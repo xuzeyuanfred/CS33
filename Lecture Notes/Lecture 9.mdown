@@ -1,0 +1,112 @@
+Lecture 9. Optimization
+
+##Performance Realities
+
+##Optimizing Compilers 
+###Provide Efficient mapping of program to machine 
+register allocation
+code selection and ordering 
+dead code elimination 
+eliminating minor inefficiencies 
+
+__Don't improve asymptotic efficiency__
+up to programmer to select best overall algorithm
+Big-O savings are often more importatn than constant factors 
+	but constant factors also matter
+
+__having difficulty overcoming optimization blockers__
+potential memory aliasing 
+potential procedure side-effect 
+
+
+###Limitation of Optimizing Compilers
+
+Not cause any change in program behavior 
+Behavior that may be obvious to the programmer can be obfuscated by langauge and coding style 
+
+Most analysis is performed only within procedures 
+
+Most analysis is based only on static information 
+
+Generally useful optimization 
+Reduce frequency with which computation performed
+If it will always produces same result 
+Especially moving code out of loop
+
+__Code Motion__
+
+```C
+
+```
+
+```C
+
+```
+
+__Compiller Generated Code Motion__
+
+```Assembly
+
+
+```
+
+###Strength Reduction
+
+Replace costly operations with simpler one
+Shift, add instead of multiply or divide 
+Utility machine dependent 
+Depends on cost of multiply or divide instruction
+On Intel Nehalem, integer multiply requires 3 CPU cycles
+
+__i.e. change multiplication to addition__
+
+
+```C
+
+```
+
+```C
+
+```
+
+
+
+###Share Common Subexpressions
+Reuse oprtions of expressions 
+GCC will do this with -O1
+
+Original code and assembly code 
+```C
+
+```
+
+```Assembly
+
+```
+
+
+More efficient code and its assembly
+```C
+
+```
+
+```Assembly
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
